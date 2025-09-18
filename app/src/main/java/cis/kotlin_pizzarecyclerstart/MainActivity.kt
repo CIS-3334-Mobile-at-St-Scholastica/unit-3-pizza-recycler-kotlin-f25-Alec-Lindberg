@@ -21,20 +21,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Slider
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue       // <-- needed for `by`
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment        // <-- for Alignment.CenterHorizontally
-import androidx.compose.ui.Modifier         // <-- for Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType  // <-- for KeyboardType
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle   // already needed
 
-// If you're using Slider from Material3, add this:
-import androidx.compose.material3.Slider
-
-// Your project imports
 import cis.kotlin_pizzarecyclerstart.ui.theme.Kotlin_PizzaRecyclerStart_F25Theme
 
 class MainActivity : ComponentActivity() {
@@ -44,7 +44,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             Kotlin_PizzaRecyclerStart_F25Theme {
                 Surface(Modifier.fillMaxSize()) {
-                    // Build the repository once and provide the VM with a factory
                     val context = LocalContext.current
                     val repo = remember {
                         PizzaRepositoryImpl(
@@ -52,7 +51,23 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     val vm: MainViewModel = viewModel(factory = MainViewModelFactory(repo))
-                    PizzaOrderScreen(vm)
+
+                    // Collect StateFlow exposed by VM (Flow path)
+                    val pizzasUi by vm.pizzaToppingsUi.collectAsStateWithLifecycle()
+
+                    // ★ CHANGED: actually render a screen + the list so UI isn't blank
+                    Column(Modifier.fillMaxSize()) {
+                        PizzaOrderScreen(vm)              // ★ NEW: show controls
+                        HorizontalDivider(
+                            Modifier.padding(vertical = 8.dp),
+                            DividerDefaults.Thickness,
+                            DividerDefaults.color
+                        ) // ★ NEW: visual separation
+                        PizzaToppingsList(pizzaList = pizzasUi)    // ★ MOVED inside Column
+                    }
+
+                    // (If you wanted only the list, you could just call PizzaToppingsList(pizzasUi))
+                    // (If you wanted only the order controls, call PizzaOrderScreen(vm))
                 }
             }
         }
